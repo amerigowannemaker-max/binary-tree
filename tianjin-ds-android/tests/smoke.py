@@ -240,16 +240,26 @@ def main():
             browsers = []
 
             def reopen():
+                for old_browser in browsers:
+                    if old_browser.is_connected():
+                        old_browser.close()
+                browsers.clear()
+                subprocess.run(['adb', 'forward', '--remove', 'tcp:9222'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 adb('shell', 'am', 'force-stop', PACKAGE)
                 adb('shell', 'monkey', '-p', PACKAGE, '-c', 'android.intent.category.LAUNCHER', '1')
                 deadline = time.monotonic() + 90
                 error = None
                 while time.monotonic() < deadline:
                     try:
+                        pid = adb('shell', 'pidof', PACKAGE).strip().split()[0]
                         sockets = re.findall(r'@(webview_devtools_remote[^\s]*)', adb('shell', 'cat', '/proc/net/unix'))
+                        sockets = [socket for socket in sockets if socket.endswith('_' + pid)]
+                        if not sockets:
+                            raise RuntimeError('Waiting for the current app WebView socket, PID=' + pid)
                         for socket in sockets:
+                            print('Connecting to current Android app WebView:', pid, socket, flush=True)
                             adb('forward', 'tcp:9222', 'localabstract:' + socket)
-                            browser = pw.chromium.connect_over_cdp('http://127.0.0.1:9222', timeout=5000, no_defaults=True)
+                            browser = pw.chromium.connect_over_cdp('http://127.0.0.1:9222', timeout=10000, no_defaults=True)
                             browsers.append(browser)
                             page = browser.contexts[0].pages[0]
                             page.on('pageerror', lambda e: REPORT['errors'].append(str(e)))
