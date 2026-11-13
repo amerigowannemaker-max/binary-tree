@@ -1,0 +1,162 @@
+name: Tianjin DS Android ARM64 and SQLite verification
+
+on:
+  push:
+    branches: ['codex/tianjin-ds-android-arm64-*']
+    paths:
+      - 'tianjin-ds-android/**'
+      - '.github/workflows/tianjin-ds-android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tianjin-ds-android-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  android:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64
+            rust_target: aarch64-linux-android
+            abi: arm64-v8a
+            name: Installable ARM64 APK
+          - target: x86_64
+            rust_target: x86_64-linux-android
+            abi: x86_64
+            name: Android emulator with real SQLite plugin
+    defaults:
+      run:
+        working-directory: tianjin-ds-android
+        shell: bash
+    env:
+      CI: 'true'
+      NDK_VERSION: '27.2.12479018'
+      CARGO_TERM_COLOR: never
+      CARGO_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tianjin-ds-android/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK and NDK
+        run: |
+          set -euo pipefail
+          mkdir -p verification
+          sdkmanager --install "platform-tools" "platforms;android-35" "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0" "ndk;${NDK_VERSION}" 2>&1 | tee verification/sdk-install.log
+          echo "NDK_HOME=${ANDROID_HOME}/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tianjin-ds-android/src-tauri
+          key: android-${{ matrix.target }}
+      - name: Restore the debug signing key for installable updates
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: tianjin-ds-2027-debug-signing-v1
+      - name: Install locked dependencies and verify original content
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund 2>&1 | tee verification/npm-ci.log
+          python3 tests/verify_integrity.py | tee verification/integrity.log
+          cargo generate-lockfile --manifest-path src-tauri/Cargo.toml 2>&1 | tee verification/cargo-lock.log
+          {
+            node --version
+            npm --version
+            rustc --version
+            cargo --version
+            java -version
+            npm ls --depth=0
+          } > verification/tool-versions.txt 2>&1
+      - name: Generate icons and Android project
+        run: |
+          set -euo pipefail
+          npm run tauri -- icon ./app-icon.png 2>&1 | tee verification/icons.log
+          npm run tauri -- android init --ci --skip-targets-install 2>&1 | tee verification/android-init.log
+      - name: Build signed debug APK
+        run: |
+          set -euo pipefail
+          npm run tauri -- android build --apk --debug --ci --target ${{ matrix.target }} 2>&1 | tee verification/android-build-${{ matrix.target }}.log
+      - name: Verify APK signature, metadata, and architecture
+        env:
+          EXPECTED_ABI: ${{ matrix.abi }}
+          BUILD_TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          mkdir -p deliverables
+          apk_path=$(find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' | head -n 1)
+          test -n "$apk_path"
+          output_path="deliverables/tianjin-ds-2027-${BUILD_TARGET}-debug.apk"
+          cp "$apk_path" "$output_path"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$output_path" > verification/apk-signature.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$output_path" > verification/apk-metadata.txt
+          python3 - <<'PY'
+          import json,os,pathlib,zipfile
+          apk=next(pathlib.Path('deliverables').glob('*.apk'))
+          with zipfile.ZipFile(apk) as z:
+              abis=sorted({p.split('/')[1] for p in z.namelist() if p.startswith('lib/') and p.endswith('.so')})
+          assert abis==[os.environ['EXPECTED_ABI']],abis
+          pathlib.Path('verification/apk-architecture.json').write_text(json.dumps({'apk':apk.name,'abis':abis,'result':'PASS'},indent=2)+'\n')
+          PY
+          sha256sum "$output_path" > deliverables/SHA256SUMS.txt
+          echo "APK_PATH=$output_path" >> "$GITHUB_ENV"
+      - name: Upload installable ARM64 APK
+        if: matrix.target == 'aarch64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tianjin-ds-2027-android-arm64-apk
+          path: tianjin-ds-android/deliverables/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Install verification tools
+        if: matrix.target == 'x86_64'
+        run: |
+          python3 -m pip install playwright==1.62.0
+          python3 -m playwright install --with-deps chromium
+      - name: Verify UI with SQLite in browser
+        if: matrix.target == 'x86_64'
+        run: python3 tests/smoke.py --mode browser 2>&1 | tee verification/browser-tests.log
+      - name: Enable emulator acceleration
+        if: matrix.target == 'x86_64'
+        run: sudo chmod 666 /dev/kvm
+      - name: Test the installed app with the real Tauri SQLite plugin
+        if: matrix.target == 'x86_64'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: bash tianjin-ds-android/tests/run_android_smoke.sh
+      - name: Upload build logs, dependency lock, and verification results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tianjin-ds-verification-${{ matrix.target }}
+          path: |
+            tianjin-ds-android/verification/
+            tianjin-ds-android/src-tauri/Cargo.lock
+            tianjin-ds-android/src-tauri/gen/android/app/build.gradle.kts
+            tianjin-ds-android/src-tauri/gen/android/gradle/wrapper/gradle-wrapper.properties
+          if-no-files-found: warn
+          retention-days: 30
