@@ -41,6 +41,7 @@ jobs:
       NDK_VERSION: '27.2.12479018'
       CARGO_TERM_COLOR: never
       CARGO_BUILD_JOBS: '2'
+      RUSTFLAGS: '-C link-arg=-Wl,-z,max-page-size=16384'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -80,7 +81,7 @@ jobs:
           set -euo pipefail
           npm ci --no-audit --no-fund 2>&1 | tee verification/npm-ci.log
           python3 tests/verify_integrity.py | tee verification/integrity.log
-          cargo generate-lockfile --manifest-path src-tauri/Cargo.toml 2>&1 | tee verification/cargo-lock.log
+          cargo metadata --locked --no-deps --format-version 1 --manifest-path src-tauri/Cargo.toml > verification/cargo-lock.json
           {
             node --version
             npm --version
@@ -111,14 +112,7 @@ jobs:
           cp "$apk_path" "$output_path"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$output_path" > verification/apk-signature.txt
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$output_path" > verification/apk-metadata.txt
-          python3 - <<'PY'
-          import json,os,pathlib,zipfile
-          apk=next(pathlib.Path('deliverables').glob('*.apk'))
-          with zipfile.ZipFile(apk) as z:
-              abis=sorted({p.split('/')[1] for p in z.namelist() if p.startswith('lib/') and p.endswith('.so')})
-          assert abis==[os.environ['EXPECTED_ABI']],abis
-          pathlib.Path('verification/apk-architecture.json').write_text(json.dumps({'apk':apk.name,'abis':abis,'result':'PASS'},indent=2)+'\n')
-          PY
+          python3 tests/verify_apk.py "$output_path" "$EXPECTED_ABI" | tee verification/apk-architecture.json
           sha256sum "$output_path" > deliverables/SHA256SUMS.txt
           echo "APK_PATH=$output_path" >> "$GITHUB_ENV"
       - name: Upload installable ARM64 APK
