@@ -101,6 +101,15 @@ def scenarios(page, reopen, exhaustive):
     assert list(select(page, 'PRAGMA integrity_check')[0].values()) == ['ok']
     passed('SQLite opens and passes integrity_check; all 210 questions are present')
 
+    page.locator('#answerInput').fill('首次启动清空回归测试')
+    wait_saved(page, lambda s: bool(s.get('records')))
+    page.locator('summary').click()
+    page.once('dialog', lambda dialog: dialog.accept())
+    page.locator('#resetAllBtn').click()
+    wait_saved(page, lambda s: s.get('records') == {})
+    page.locator('summary').click()
+    passed('Clear-all on first launch does not reuse mutated default records')
+
     draft = "草稿 O'Reilly; DROP TABLE app_state; 😀"
     page.locator('#answerInput').fill(draft)
     wait_saved(page, lambda s: s.get('records', {}).get('1', {}).get('text') == draft)
