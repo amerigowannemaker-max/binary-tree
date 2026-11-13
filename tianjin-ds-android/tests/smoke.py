@@ -50,7 +50,7 @@ class SQLiteHandler(SimpleHTTPRequestHandler):
             else:
                 with sqlite3.connect(self.db_path, timeout=20) as con:
                     con.row_factory = sqlite3.Row
-                    cursor = con.execute(args['query'], args.get('values', []))
+                    cursor = con.execute(args['query'], {str(i + 1): value for i, value in enumerate(args.get('values', []))})
                     result = ([dict(row) for row in cursor.fetchall()] if command.endswith('|select')
                               else [max(cursor.rowcount, 0), cursor.lastrowid])
             payload = json.dumps({'result': result}, ensure_ascii=False).encode()
@@ -249,7 +249,7 @@ def main():
                         sockets = re.findall(r'@(webview_devtools_remote[^\s]*)', adb('shell', 'cat', '/proc/net/unix'))
                         for socket in sockets:
                             adb('forward', 'tcp:9222', 'localabstract:' + socket)
-                            browser = pw.chromium.connect_over_cdp('http://127.0.0.1:9222', timeout=5000)
+                            browser = pw.chromium.connect_over_cdp('http://127.0.0.1:9222', timeout=5000, no_defaults=True)
                             browsers.append(browser)
                             page = browser.contexts[0].pages[0]
                             page.on('pageerror', lambda e: REPORT['errors'].append(str(e)))

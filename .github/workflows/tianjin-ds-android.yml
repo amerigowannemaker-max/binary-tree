@@ -71,6 +71,7 @@ jobs:
         with:
           workspaces: tianjin-ds-android/src-tauri
           key: android-${{ matrix.target }}
+          cache-on-failure: true
       - name: Restore the debug signing key for installable updates
         uses: actions/cache@v4
         with:
