@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#edf3fb">
+<title>二叉树｜GCC在线编译 · 四屏同步实验台</title>
+<style>
+:root{--bg:#edf3fb;--paper:#fff;--ink:#20304a;--muted:#7c8da5;--border:#dbe5f2;--blue:#2367da;--bluebg:#e9f1ff;--violet:#7752ca;--violetbg:#f3edff;--teal:#159679;--tealbg:#e6f7f2;--gold:#bd7319;--goldbg:#fff4e6;--shadow:0 3px 15px #42618a0d}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overscroll-behavior:none}body{font:13px/1.4 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:var(--ink);background:var(--bg)}button,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.4;cursor:default}button:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid #87b9fa;outline-offset:1px}b,strong{font-weight:800}
+#app{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;padding:env(safe-area-inset-top) 9px env(safe-area-inset-bottom);gap:7px;max-width:1700px;margin:auto}
+header{height:40px;min-height:40px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 5px}
+.brand{display:flex;align-items:center;gap:8px;white-space:nowrap;font-weight:900;font-size:15px}.brand-icon{background:var(--blue);color:white;width:27px;height:27px;border-radius:9px;display:grid;place-items:center;font-weight:800}.version{font-size:10px;font-weight:750;color:#869bb6;margin-left:3px}.live{display:flex;align-items:center;gap:6px;color:#5d7390;font-weight:750;font-size:11px}.live:before{content:"";background:#20b08a;height:7px;width:7px;border-radius:50%}
+.toolbar{display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:6px;min-height:46px;background:var(--paper);border:1px solid var(--border);border-radius:12px;padding:6px;box-shadow:var(--shadow)}.group{display:flex;align-items:center;gap:5px;min-width:0;flex-wrap:nowrap}.toolbar button,.toolbar select,.panel-tools button,.timeline button{border:1px solid var(--border);border-radius:8px;color:#4c6280;background:#fff;font-weight:750;min-height:31px;padding:6px 9px;white-space:nowrap}.toolbar button.active{color:var(--blue);border-color:#9fc0f5;background:var(--bluebg)}.toolbar button.primary{color:#fff;background:var(--blue);border-color:var(--blue)}.toolbar button.delete{color:#af5b51}.toolbar button:hover:not(:disabled),.timeline button:hover:not(:disabled){border-color:#8cb6f6}.selected-badge{display:inline-flex;white-space:nowrap;align-items:center;gap:5px;padding:5px 9px;color:#3867af;background:#f0f6ff;border:1px solid #dae6f9;border-radius:9px;font-weight:750}.selected-badge em{font-style:normal;color:var(--muted);font-size:10px}
+.metrics{min-height:31px;display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}.metrics::-webkit-scrollbar{display:none}.metric{white-space:nowrap;border:1px solid var(--border);background:#fff;border-radius:8px;font-size:11px;color:#667b97;padding:5px 10px;display:inline-flex;gap:6px;align-items:center}.metric b{color:var(--ink);font-variant-numeric:tabular-nums}.metric.warning b{color:#b66c21}.metric.flow{flex:1;min-width:185px;color:#2e69c4;overflow:hidden;text-overflow:ellipsis}
+.workspace{min-height:0;flex:1;display:grid;gap:7px;grid-template-columns:minmax(0,1.4fr) minmax(280px,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr) minmax(138px,.49fr);grid-template-areas:"tree array" "tree link" "steps steps"}
+.panel{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--paper);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;position:relative}.panel-tree{grid-area:tree}.panel-array{grid-area:array}.panel-link{grid-area:link}.panel-steps{grid-area:steps}
+.panel-head{min-height:39px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid #edf1f7;gap:6px}.panel-name{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:900;white-space:nowrap}.num{display:grid;place-items:center;width:24px;height:24px;border-radius:7px;color:var(--blue);background:var(--bluebg);font-size:11px}.num.purple{color:var(--violet);background:var(--violetbg)}.num.green{color:var(--teal);background:var(--tealbg)}.panel-mini{color:#91a1b6;font-weight:750;font-size:10px}.panel-tools{display:flex;gap:5px;align-items:center}.panel-tools button{min-height:25px;padding:3px 6px;font-size:10px}.panel-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-color:#cbd9e9 transparent}.panel-foot{flex-shrink:0;border-top:1px solid #edf1f6;background:#fafdff;min-height:28px;display:flex;align-items:center;gap:5px;padding:4px 10px;color:#6d819c;font-size:10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#treeViewport{position:relative;min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;background-color:#f8fbff;background-image:radial-gradient(#dce7f2 0.8px,transparent .8px);background-size:18px 18px;scrollbar-width:thin;display:flex;align-items:center}
+#treeSvg{display:block;width:100%;min-width:0;min-height:100%;height:100%;overflow:visible;touch-action:pan-x pan-y}#treeViewport.detail #treeSvg{min-width:800px}
+.edge{fill:none;stroke:#bacbe3;stroke-width:3.2;stroke-linecap:round}.edge.hot{stroke:#36ad94;stroke-width:5}.edge.preview{stroke-dasharray:8 8;stroke:#d4a34d;stroke-width:3}.edge.visit{stroke:#87b6fa}
+.node{cursor:pointer}.node .halo{fill:transparent;stroke:transparent;stroke-width:5}.node .ball{fill:#fff;stroke:#82a8e0;stroke-width:2.6}.node .label{fill:#315c9e;text-anchor:middle;dominant-baseline:middle;font-weight:850;font-size:23px}.node .index{fill:#8499b7;text-anchor:middle;font-size:13px;font-weight:800}.node.selected .halo{stroke:#9ac6ff}.node.selected .ball{fill:var(--blue);stroke:var(--blue)}.node.selected .label{fill:white}.node.ghost .ball{stroke:#dbac59;fill:#fff8e8;stroke-dasharray:5 4}.node.ghost .label{fill:#b37a22}.node.recent .ball,.node.current .ball{fill:#18a486;stroke:#099476}.node.recent .label,.node.current .label{fill:white}.node.visited:not(.selected) .ball{stroke:#14ad8d;stroke-width:4}
+#arrayGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(45px,1fr));gap:5px;padding:9px;align-content:start;min-height:100%}.slot{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:48px;gap:3px;background:#f6f9fd;border:1px solid #dce6f2;border-radius:7px;color:#3f6fac}.slot .idx{font-size:10px;color:#8aa0bd;font-weight:750}.slot .letter{font-size:15px;font-weight:850;line-height:1}.slot.empty{border-style:dashed;color:#bdc8d5;background:#fbfcfe}.slot.empty .letter{font-size:14px;font-weight:500}.slot.selected{background:var(--blue);color:white;border-color:var(--blue);box-shadow:0 0 0 2px #c7deff}.slot.selected .idx{color:#dbeaff}.slot.ghost{border-color:#e4b25f;color:#ac741f;background:#fff8eb;box-shadow:0 0 0 2px #ffebbd}.slot.recent,.slot.current{border-color:var(--teal);background:#e6f8f1;color:#0c876e;box-shadow:0 0 0 2px #bfeede}.slot.highlightParent{border-color:#2b72e0}
+#linkedGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:6px;padding:9px;align-content:start}.mem{background:#faf7ff;border:1px solid #e4d9f7;border-radius:9px;padding:6px;min-width:0;cursor:pointer}.mem.selected{border-color:#7657d2;box-shadow:0 0 0 2px #e3d9fb}.mem.ghost{border:1px dashed #cc9e54;background:#fff8ed}.mem.recent,.mem.current{border-color:var(--teal);background:#edf9f5}.mem-header{display:flex;justify-content:space-between;align-items:center;gap:6px;font-weight:850;font-size:11px;color:#8466b9}.mem-header strong{background:#7654c4;color:white;min-width:23px;text-align:center;border-radius:6px;padding:3px 4px;font-size:12px}.mem.ghost .mem-header strong{background:#c79b4b}.mem-fields{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px}.mem-field{min-width:0;overflow:hidden;background:#fff;border:1px solid #eee8f8;border-radius:5px;padding:5px}.mem-field span{display:block;color:#9182ad;font-size:9px}.mem-field b{display:block;color:#6e4db5;font:850 11px ui-monospace,monospace;white-space:nowrap}.mem-field b.null{color:#afbac8}.mem-field.affected{border-color:#58bda7;background:#e9f9f5}.mem-field.affected b{color:#09866d}.mem-field.await{border:1px dashed #ddb268;background:#fffaf1}
+#stepArea{display:flex;flex-direction:column;gap:6px;padding:9px 11px 9px;min-height:0;overflow:auto}.step-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:27px}.step-actions{display:flex;gap:5px;align-items:center}.timeline button{padding:5px 10px;min-height:28px;font-size:11px}.timeline button.strong{background:var(--blue);color:white;border-color:var(--blue)}.timeline select{border-radius:7px;border:1px solid var(--border);min-height:28px;font-weight:800;font-size:11px;color:#546882}.step-status{color:#315884;font-size:12px;font-weight:750;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.stage-strip{display:flex;gap:5px;align-items:stretch}.stage{flex:1;text-align:center;border-radius:7px;border:1px solid #e1e8f2;background:#f7f9fc;padding:6px 3px;font-size:11px;color:#8da0b8;font-weight:800;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.stage.passed{background:var(--tealbg);border-color:#b8e5d7;color:#168a72}.stage.active{color:#fff;background:var(--blue);border-color:var(--blue)}.stage.pending{color:#a1aec0}.trace{border-left:3px solid var(--blue);padding:2px 9px;color:#617894;line-height:1.45;font-size:11px;min-height:16px}.trace b{color:#2a65b9}
+#paneHint{display:none}.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:890px){.toolbar{overflow:auto;flex-shrink:0}.toolbar::-webkit-scrollbar{display:none}.toolbar .group{flex-shrink:0}.workspace{grid-template-columns:1fr 1fr;grid-template-rows:minmax(190px,42fr) minmax(140px,31fr) minmax(125px,27fr);grid-template-areas:"tree tree" "array link" "steps steps"}.panel-tree .panel-head{min-height:34px}.panel-foot{min-height:25px}#linkedGrid{grid-template-columns:1fr}.workspace .panel-steps .panel-head{min-height:32px}.metric{font-size:10px}}
+@media(max-width:510px){#app{gap:5px;padding-left:6px;padding-right:6px}header{height:34px;min-height:34px}.brand{font-size:13px}.version{font-size:9px}.toolbar{min-height:40px;padding:4px;gap:5px;flex-wrap:wrap;justify-content:space-between}.toolbar .group:last-child{width:100%;justify-content:space-between}.toolbar .group:last-child button{flex:1;min-width:0}.toolbar button,.toolbar select{min-height:29px;padding:5px 7px;font-size:11px}.selected-badge{font-size:11px;padding:5px}.metrics{min-height:27px;gap:4px}.metric{font-size:10px;padding:4px 7px}.workspace{gap:5px;grid-template-rows:minmax(180px,43fr) minmax(138px,32fr) minmax(125px,25fr)}.panel-head{min-height:34px;padding:5px 7px}.panel-name{font-size:11px;gap:5px}.num{width:21px;height:21px}.panel-mini{font-size:9px}.panel-foot{padding:4px 6px;font-size:9px}.panel-tools button{font-size:9px;min-height:24px;padding:3px 5px}#arrayGrid{padding:6px;gap:4px;grid-template-columns:repeat(auto-fill,minmax(35px,1fr))}.slot{min-height:43px}.slot .idx{font-size:9px}.slot .letter{font-size:13px}#linkedGrid{padding:5px;gap:5px}.mem{padding:5px}.mem-header{font-size:10px}.mem-fields{gap:3px}.mem-field{padding:4px}.mem-field b{font-size:10px}#stepArea{padding:6px 8px;gap:4px}.stage{padding:5px 2px;font-size:9px}.timeline button{padding:4px 7px;min-height:26px;font-size:10px}.step-status{font-size:10px}.trace{font-size:10px}.step-top{gap:4px}}
+@media(max-height:650px){#app{gap:4px}header{height:29px;min-height:29px}.toolbar{min-height:35px}.metrics{min-height:24px}.workspace{grid-template-rows:minmax(160px,45fr) minmax(110px,29fr) minmax(105px,26fr)}.panel-head{min-height:28px}.panel-foot{min-height:22px}.stage{padding:3px 2px}#stepArea{gap:3px;padding:5px}.trace{font-size:10px}}
+@media(orientation:landscape) and (max-height:650px){.workspace{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(240px,.9fr);grid-template-rows:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"tree array steps" "tree link steps"}.step-top{flex-wrap:wrap}.step-actions{flex-wrap:wrap}.stage-strip{flex-direction:column}.stage{padding:6px}.panel-steps .panel-head{flex-wrap:wrap}.panel-steps .panel-foot{display:none}}
+.panel.expanded{position:fixed;inset:env(safe-area-inset-top) 6px env(safe-area-inset-bottom);z-index:10;box-shadow:0 8px 60px #182f5770}.panel.expanded .panel-head{min-height:46px}.panel.expanded .panel-tools .expand::after{content:'返回四屏';font-weight:800}.panel.expanded .expand-label{display:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* v3.1: browser-to-Wandbox real GCC compiler, C99 classroom example */
+.compiler-controls{display:flex;flex-wrap:nowrap;align-items:center;gap:5px;min-width:0;flex-shrink:0}.code-btn{min-height:23px!important;padding:3px 7px!important;border:1px solid #ccdcf1!important;background:#fff;color:#285f9e!important;border-radius:6px!important;font-size:10px!important;font-weight:800}.code-btn.main-code-btn{background:#e5f1ff!important;color:#175bb7!important}.compiler-status{font-size:10px;font-weight:800;color:#168e71;flex:1;min-width:50px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.compiler-status.error{color:#c74e54}.code-work{height:112px;min-height:112px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(105px,.7fr);gap:6px;flex-shrink:0}.code-pane{position:relative;min-width:0;overflow:hidden;background:#111d31;border-radius:8px;border:1px solid #20344e}.source-view{height:100%;overflow:auto;scrollbar-width:thin;padding:4px 0;font:11px/1.6 ui-monospace,Consolas,monospace;color:#d8e9fc;white-space:pre}.src-line{display:grid;grid-template-columns:26px minmax(0,1fr);min-height:18px}.src-line .ln{padding-right:7px;color:#70859e;border-right:1px solid #38506f;text-align:right;user-select:none}.src-line .src{padding:0 8px;overflow:visible}.src-line.active{background:#25507b;box-shadow:inset 3px 0 #50e5c0}.src-line.active .ln{color:#e7fff8}.src-line .src .keyword{color:#95bbff}.src-line .src .func{color:#9ee4d3}.vars-pane{background:#f4f8fe;border:1px solid #dce7f5;border-radius:8px;min-width:0;overflow:auto;padding:6px;font:10.5px/1.65 ui-monospace,Consolas,monospace}.watch-title{font-size:9px;font-weight:800;color:#7b91ac;margin-bottom:3px}.var-row{display:flex;gap:4px;justify-content:space-between;border-bottom:1px solid #e1e9f4;white-space:nowrap}.var-row b{color:#1c64bf}.var-row.current b{color:#068c74}.watch-content{color:#7789a0}.watch-tip{color:#849ab4;margin-top:4px;font:10px/1.4 system-ui,sans-serif}
+.editor-dialog,.output-dialog{border:1px solid #d3e0f2;border-radius:13px;box-shadow:0 25px 90px #0a24466e;color:#1e3555;background:#fff;padding:0;max-width:min(850px,calc(100vw - 16px));max-height:95dvh;width:720px}.editor-dialog::backdrop,.output-dialog::backdrop{background:#0b1a30b5}.dialog-head{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;border-bottom:1px solid #e5ecf6;gap:6px}.dialog-head button,.dialog-buttons button{padding:6px 10px;border:1px solid #cadbef;border-radius:7px;background:#f2f7ff;font-weight:700;color:#34649e}.dialog-note{padding:10px 13px 6px;font-size:11px;color:#6d819d}.editor-dialog textarea{display:block;margin:5px 10px;width:calc(100% - 20px);height:min(45dvh,400px);resize:vertical;border:1px solid #45607d;border-radius:7px;background:#111d31;color:#e0ecfa;outline:0;padding:10px;font:12px/1.55 ui-monospace,Consolas,monospace;tab-size:4}.dialog-buttons{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:8px 12px;flex-wrap:wrap}.dialog-buttons label{display:inline-flex;align-items:center;gap:4px;margin-right:auto;color:#607793;font-size:11px}.dialog-buttons .dialog-primary{background:#2168da;color:white;border-color:#2168da}.editor-console{background:#0e192a;color:#c6e3ff;margin:4px 10px 10px;padding:10px;border-radius:8px;min-height:54px;max-height:20dvh;overflow:auto;white-space:pre-wrap;word-break:break-word;font:11px/1.55 ui-monospace,Consolas,monospace}.output-dialog .editor-console{max-height:65dvh;min-height:170px}
+#stepsPanel.expanded .code-work{height:auto;min-height:180px;flex:1}#stepsPanel.expanded .source-view{font-size:13px}#stepsPanel.expanded .vars-pane{font-size:12px}
+@media(min-width:891px){.workspace{grid-template-rows:minmax(0,1fr) minmax(0,1fr) minmax(215px,.85fr)}}
+@media(max-width:890px){.workspace{grid-template-rows:minmax(150px,39fr) minmax(125px,28fr) minmax(180px,33fr)}}
+@media(max-width:510px){.workspace{grid-template-rows:minmax(145px,38fr) minmax(120px,26fr) minmax(183px,36fr)}.code-work{height:94px;min-height:94px;grid-template-columns:minmax(0,1.35fr) minmax(96px,.8fr);gap:4px}.source-view{font-size:9px}.vars-pane{font-size:9px;padding:4px}.compiler-status{font-size:9px}.code-btn{font-size:9px!important;padding:3px 5px!important}#stepsPanel.expanded .code-work{grid-template-columns:1fr;grid-template-rows:minmax(170px,1fr) 94px}}
+@media(orientation:landscape) and (max-height:650px){.workspace{grid-template-rows:minmax(0,1fr) minmax(0,1fr)}#stepArea{overflow:auto}.code-work{height:130px;min-height:130px}}
+</style>
+</head>
+<body>
+<div id="app">
+<header><div class="brand"><div class="brand-icon">⑂</div>二叉树 · C语言同步实验台 <span class="version">v3.1</span></div><span class="live">联网 · 真实 GCC 编译</span></header>
+<div class="toolbar" role="toolbar" aria-label="结点编辑和示例选择">
+  <div class="group" aria-label="二叉树形状"><button data-preset="complete" class="active">完全</button><button data-preset="sparse">稀疏</button><button data-preset="skew">右斜</button></div>
+  <div class="group"><span class="selected-badge" id="selectedBadge">选中 A <em>i=1</em></span></div>
+  <div class="group"><button id="addLeft" class="primary">＋ 左孩子</button><button id="addRight" class="primary">＋ 右孩子</button><button id="deleteNode" class="delete">删除子树</button><button id="undo">↶ 撤销</button></div>
+</div>
+<div class="metrics" aria-label="空间统计"><span class="metric">结点 <b id="mNodes">—</b></span><span class="metric">数组长度 <b id="mArray">—</b></span><span class="metric warning">空槽 <b id="mWaste">—</b></span><span class="metric">利用率 <b id="mRate">—</b></span><span class="metric flow" id="notice" role="status" aria-live="polite">点击任一结点，再插入孩子</span></div>
+<div class="workspace">
+  <section class="panel panel-tree" id="treePanel"><div class="panel-head"><span class="panel-name"><span class="num">01</span>二叉树 · 插入现场</span><div class="panel-tools"><span class="panel-mini" id="treeDetail">选中结点</span><button id="treeZoom">局部放大</button><button class="expand" data-expand="treePanel" aria-label="放大二叉树面板"><span class="expand-label">⛶</span></button></div></div><div id="treeViewport"><svg id="treeSvg" role="img" aria-label="可点击的二叉树结点图" viewBox="0 0 900 500"></svg></div><div class="panel-foot" id="treeFoot">点击圆圈选中父结点；绿色表示本次插入完成</div></section>
+  <section class="panel panel-array" id="arrayPanel"><div class="panel-head"><span class="panel-name"><span class="num">02</span>顺序存储 · Array[i]</span><div class="panel-tools"><span class="panel-mini">左 2i · 右 2i+1</span><button class="expand" data-expand="arrayPanel" aria-label="放大顺序存储面板"><span class="expand-label">⛶</span></button></div></div><div class="panel-body" id="arrayBody"><div id="arrayGrid"></div></div><div class="panel-foot" id="arrayFoot">空槽 ∅ 也占据到最大下标的数组位置</div></section>
+  <section class="panel panel-link" id="linkPanel"><div class="panel-head"><span class="panel-name"><span class="num purple">03</span>链式存储 · 指针</span><div class="panel-tools"><span class="panel-mini">data / left / right</span><button class="expand" data-expand="linkPanel" aria-label="放大链式存储面板"><span class="expand-label">⛶</span></button></div></div><div class="panel-body" id="linkBody"><div id="linkedGrid"></div></div><div class="panel-foot" id="linkFoot">NULL 表示没有孩子；不预留数组空槽</div></section>
+  <section class="panel panel-steps timeline" id="stepsPanel"><div class="panel-head"><span class="panel-name"><span class="num green">04</span>C 语言 · GCC 逐帧验证</span><div class="panel-tools"><select id="mode" aria-label="动画类型"><option value="insert">插入动画</option><option value="level">层序遍历</option><option value="pre">先序遍历</option><option value="in">中序遍历</option><option value="post">后序遍历</option></select><button class="expand" data-expand="stepsPanel" aria-label="放大动画面板"><span class="expand-label">⛶</span></button></div></div><div id="stepArea" class="panel-body"><div class="step-top"><div class="step-status" id="stepStatus">点击“＋ 左孩子 / ＋ 右孩子”开始插入</div><div class="step-actions"><button id="nextStep" class="strong">下一帧 →</button><button id="autoPlay">▶ 自动</button><button id="resetAnimation">重置动画</button></div></div><div class="compiler-controls"><button id="editC" class="code-btn">✎ 编辑 C</button><button id="compileC" class="code-btn main-code-btn">⟳ 在线编译</button><span id="compileStatus" class="compiler-status">未编译</span><button id="outputC" class="code-btn" title="查看真实编译输出">输出</button></div>
+<div class="code-work"><div class="code-pane" id="codePane"><div id="sourceView" class="source-view" aria-label="C语言插入函数逐行高亮"></div></div><div id="varsView" class="vars-pane"><div class="watch-title">C 运行时变量</div><div id="watchContent" class="watch-content">选择父结点并点击插入</div></div></div>
+<div id="stageStrip" class="stage-strip"></div><div id="trace" class="trace">插入时，四个区域逐帧同步，显示新结点如何从逻辑树映射到数组和指针。</div></div></section>
+</div>
+</div>
+<dialog id="editorDialog" class="editor-dialog"><div class="dialog-head"><b>天津专升本 · C语言插入函数</b><button id="closeEditor" type="button">关闭</button></div><div class="dialog-note">真实 GCC 在线编译。可修改插入函数；保留 TRACE(1～4, ...) 才能同步逐帧动画。停止输入约 1.8 秒自动编译，也可点击按钮立即编译。</div><textarea id="cEditor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="编辑插入函数 C 源码"></textarea><div class="dialog-buttons"><label><input type="checkbox" id="autoCompile" checked>停止输入后自动编译</label><button id="restoreC">恢复标准代码</button><button id="submitC" class="dialog-primary">GCC 编译并验证</button></div><pre id="editorConsole" class="editor-console" aria-live="polite">未编译。</pre></dialog>
+<dialog id="outputDialog" class="output-dialog"><div class="dialog-head"><b>GCC 编译结果 / 原始输出</b><button id="closeOutput">关闭</button></div><pre id="compilerConsole" class="editor-console"></pre><div class="dialog-buttons"><button id="copyC">复制完整 C 程序</button><button id="copyOutput">复制输出</button></div></dialog>
+<script>
+(()=>{'use strict';
+const $=s=>document.querySelector(s);
+const initial={complete:[[1,'A'],[2,'B'],[3,'C'],[4,'D'],[5,'E'],[6,'F'],[7,'G'],[8,'H'],[9,'I'],[10,'J']],sparse:[[1,'A'],[2,'B'],[3,'C'],[5,'D'],[6,'E'],[11,'F'],[12,'G']],skew:[[1,'A'],[3,'B'],[7,'C'],[15,'D'],[31,'E']]};
+let nodes=new Map(),selected=1,serial=1,history=[],preset='complete',job=null,finished=null,step=0,played=[],timer=null,zoom=false;
+let compilerName=null,compiledFrames=[],compileBusy=false,compileMessage="未编译｜点击插入将调用线上 GCC",compileOutput="",compileError="",activeTrace=null,remoteToken=0,editTimer=null,codeDirty=false,cEditorOpen=false,lastCompilePass=false;
+const maxIndex=31,depth=i=>Math.floor(Math.log2(i))+1,asID=n=>'N'+String(n.no).padStart(2,'0');
+const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const notice=t=>$('#notice').textContent=t;
+function stop(){if(timer)clearInterval(timer);timer=null;$('#autoPlay').textContent='▶ 自动'}
+function clearPlayback(){stop();step=0;played=[];activeTrace=null;compiledFrames=[]}
+function clone(){return new Map([...nodes].map(([i,n])=>[i,{...n}]))}
+function snapshot(){history.push({nodes:clone(),serial,selected,preset});if(history.length>40)history.shift()}
+function choosePreset(name){remoteToken++;compileBusy=false;$("#compileC").disabled=false;stop();nodes=new Map();serial=1;for(const [i,label] of initial[name])nodes.set(i,{label,no:serial++});selected=name==='complete'?8:name==='sparse'?11:1;history=[];job=null;finished=null;clearPlayback();compileError="";preset=name;$('#mode').value='insert';document.querySelectorAll('[data-preset]').forEach(b=>b.classList.toggle('active',b.dataset.preset===name));notice(name==='complete'?'完全二叉树：数组下标紧凑。':name==='sparse'?'稀疏二叉树：注意数组空槽。':'右斜树：5 个结点，数组最大下标 31。');render()}
+function ghost(){return job&&job.phase>=2&&job.phase<4?{index:job.index,label:job.label,no:job.no}:null}
+function displayMap(){const v=clone(),g=ghost();if(g)v.set(g.index,{label:g.label,no:g.no,ghost:true});return v}
+function select(i){if(job&&job.phase<4){notice('插入过程中请先完成动画，或点击“重置动画”取消预览。');return}if(!nodes.has(i))return;if(job?.phase>=4)job=null;selected=i;finished=null;clearPlayback();render()}
+async function startInsert(side){
+  if(job&&job.phase<4){notice('请先完成或取消当前插入。');return}
+  const idx=selected*2+(side==='R'?1:0);
+  if(idx>maxIndex){notice('最多显示 5 层，请选择更浅的父结点。');return}
+  if(nodes.has(idx)){notice('这个孩子位置已存在结点。');return}
+  clearPlayback();$('#mode').value='insert';finished=null;
+  const label=String.fromCharCode(65+(serial-1)%26);
+  job={parent:selected,index:idx,side,label,no:serial,phase:0,ready:false};
+  notice(`远程编译中：准备在 ${nodes.get(selected).label} 的${side==='L'?'左':'右'}侧插入 ${label}…`);
+  render();await compileForScenario({parent:selected,index:idx,side,label},true);
+}
+function finishJob(){if(!job)return;snapshot();nodes.set(job.index,{label:job.label,no:job.no});serial++;selected=job.index;job.phase=4;finished={...job};notice(`插入完成：${job.label} → A[${job.index}]；父结点 ${nodes.get(job.parent).label}.${job.side==='L'?'left':'right'} → ${asID(nodes.get(job.index))}`)}
+function advance(){
+  const mode=$('#mode').value;
+  if(mode!=='insert'){advanceTraversal();return}
+  if(!job){notice('请选择父结点，然后插入左/右孩子。');return}
+  if(!job.ready){notice(compileBusy?'线上 GCC 编译中…':(compileError||'请先完成编译验证。'));return}
+  if(job.phase>=4){stop();return}
+  const frame=compiledFrames[job.phase];
+  if(!frame){stop();notice('编译轨迹不完整，未修改二叉树。');return}
+  job.phase=frame.phase;activeTrace=frame;
+  if(job.phase===4){finishJob();stop()}
+  render();
+}
+function cancelAnimation(){remoteToken++;compileBusy=false;$("#compileC").disabled=false;stop();if(job&&job.phase<4){notice('已取消本次插入预览，实际树未修改。');job=null}else if(job&&job.phase>=4){notice('动画已复位；已插入的结点保留。如需恢复，请点击“撤销”。');job=null}finished=null;clearPlayback();render()}
+function deleteNode(){remoteToken++;compileBusy=false;$("#compileC").disabled=false;if(job&&job.phase<4){notice('请先完成插入或取消预览。');return}if(selected===1){notice('此实验保留根结点，不可删除。');return}snapshot();stop();const old=selected;const gone=[];function walk(i){if(!nodes.has(i))return;gone.push(i);walk(2*i);walk(2*i+1)}walk(old);for(const i of gone)nodes.delete(i);selected=Math.floor(old/2);job=null;finished=null;clearPlayback();notice(`删除 ${gone.length} 个结点；数组长度可能缩短，对应父结点指针变为 NULL。`);render()}
+function undo(){remoteToken++;compileBusy=false;$("#compileC").disabled=false;stop();if(job&&job.phase<4){job=null;notice('取消了尚未完成的插入。');render();return}const prev=history.pop();if(!prev){notice('暂无可撤销的操作。');return}nodes=prev.nodes;serial=prev.serial;selected=prev.selected;preset=prev.preset;job=null;finished=null;clearPlayback();notice('已撤销上一次结点修改。');render()}
+function traversal(){const type=$('#mode').value,ret=[];function go(i){if(!nodes.has(i))return;if(type==='pre')ret.push(i);go(2*i);if(type==='in')ret.push(i);go(2*i+1);if(type==='post')ret.push(i)}if(type==='level')return [...nodes.keys()].sort((a,b)=>a-b);go(1);return ret}
+function advanceTraversal(){if(job&&job.phase<4){stop();notice('先完成插入动画再运行遍历验证。');return}const seq=traversal();if(step>=seq.length){stop();return}selected=seq[step];played.push(selected);step++;if(step===seq.length)stop();render()}
+function playAuto(){if(timer){stop();return}if(compileBusy){notice("正在等待 GCC 返回结果");return}if($("#mode").value==="insert"&&job&&!job.ready){notice(compileError||"尚未得到真实编译执行结果");return}if($('#mode').value==='insert'&&(!job||job.phase>=4)){notice('选择一个父结点并点击插入，开始新一轮动画。');return}if($('#mode').value!=='insert'&&step>=traversal().length){step=0;played=[]}advance();if(($('#mode').value==='insert'&&(!job||job.phase>=4))||($('#mode').value!=='insert'&&step>=traversal().length))return;$('#autoPlay').textContent='Ⅱ 暂停';timer=setInterval(()=>{advance();const done=$('#mode').value==='insert'?(!job||job.phase>=4):(step>=traversal().length);if(done)stop()},1050)}
+function measure(){const realMax=Math.max(...nodes.keys());let visualMax=Math.max(realMax,job&&job.phase>=3&&job.phase<4?job.index:0);const empty=realMax-nodes.size;$('#mNodes').textContent=nodes.size;$('#mArray').textContent=realMax;$('#mWaste').textContent=empty;$('#mRate').textContent=(100*nodes.size/realMax).toFixed(1)+'%';$('#selectedBadge').innerHTML=`选中 ${escapeHTML(nodes.get(selected).label)} <em>i=${selected}</em>`;$('#treeDetail').textContent=`第 ${depth(selected)} 层 · A[${selected}]`;$('#arrayFoot').textContent=job&&job.phase>=3&&job.phase<4?`预览：将扩展到 A[${visualMax}]；尚未正式写入`: `${empty} 个空槽；数组下标 i 的左右孩子为 2i 和 2i+1`;$('#linkFoot').textContent=job&&job.phase>=2&&job.phase<4?`新结点 ${job.label} 已分配；父指针尚未连接`:`已分配 ${nodes.size} 个结点；NULL 指针域 ${nodes.size+1} 个`;$('#addLeft').disabled=selected*2>maxIndex||nodes.has(selected*2)||!!(job&&job.phase<4);$('#addRight').disabled=selected*2+1>maxIndex||nodes.has(selected*2+1)||!!(job&&job.phase<4);$('#deleteNode').disabled=selected===1||!!(job&&job.phase<4);$('#undo').disabled=history.length===0&&!(job&&job.phase<4)}
+function treePos(map){const keys=[...map.keys()],lo=Math.min(...keys.map(i=>coord(i))),hi=Math.max(...keys.map(i=>coord(i)));let dmax=Math.max(...keys.map(depth));const width=900,height=470;const x=new Map(),y=new Map();const maxRange=hi-lo;for(const i of keys){const val=coord(i),vx=maxRange<.03?450:105+(val-lo)/maxRange*690;x.set(i,vx);y.set(i,58+(depth(i)-1)*Math.min(90,342/Math.max(dmax-1,1)))}return{x,y,dmax,width,height}}
+function coord(i){let path=[],x=0,delta=.25;while(i>1){path.unshift(i%2?1:-1);i=Math.floor(i/2)}for(const move of path){x+=move*delta;delta/=2}return x}
+function renderTree(){const map=displayMap(),{x,y,dmax}=treePos(map);const viewHeight=Math.max(190,110+(dmax-1)*Math.min(90,342/Math.max(dmax-1,1)));$('#treeSvg').setAttribute('viewBox',`0 0 900 ${viewHeight}`);let s='';for(const i of [...map.keys()].sort((a,b)=>a-b)){if(i===1)continue;const p=Math.floor(i/2),preview=map.get(i).ghost,hot=job&&job.phase>=4&&job.index===i;const selectedEdge=i===selected||p===selected;const cls=preview?'preview':hot?'hot':selectedEdge?'visit':'';s+=`<path class="edge ${cls}" d="M${x.get(p)} ${y.get(p)+23} L${x.get(i)} ${y.get(i)-23}"/>`;s+=`<text x="${(x.get(p)+x.get(i))/2+5}" y="${(y.get(p)+y.get(i))/2-6}" font-size="12" font-weight="750" fill="${preview?'#bc8d38':'#92a4bc'}">${i%2?'R':'L'}</text>`}
+for(const i of [...map.keys()].sort((a,b)=>a-b)){const node=map.get(i),ghostNode=!!node.ghost,recent=(job&&job.phase>=4&&job.index===i)||(finished&&finished.index===i),current=played.includes(i)&&played[played.length-1]===i,visited=played.includes(i),cl=ghostNode?'ghost':recent?'recent':current?'current':i===selected?'selected':visited?'visited':'';s+=`<g class="node ${cl}" data-i="${i}" tabindex="0" role="button" aria-label="结点 ${escapeHTML(node.label)}，数组下标 ${i}" transform="translate(${x.get(i)},${y.get(i)})"><circle class="halo" r="29"/><circle class="ball" r="23"/><text class="label" y="1">${escapeHTML(node.label)}</text><text class="index" y="40">${i}</text></g>`}$('#treeSvg').innerHTML=s;const lbl=job?(job.phase<4?`插入预览：${nodes.get(job.parent).label} ${job.side==='L'?'左':'右'}→ ${job.label}（阶段 ${job.phase}/4）`:`已插入：${job.label}，点击其他结点可继续`):`选中 ${nodes.get(selected).label} · 下标 ${selected} · 点击结点后插入`;$('#treeFoot').textContent=lbl;}
+function renderArray(){const map=displayMap(),max=Math.max(...nodes.keys(),job&&job.phase>=3&&job.phase<4?job.index:0);let s='';for(let i=1;i<=max;i++){const n=map.get(i),actual=nodes.has(i),isGhost=n?.ghost&&job.phase>=3,recent=job&&job.phase>=4&&job.index===i,cur=played.includes(i)&&played[played.length-1]===i,cls=isGhost?'ghost':recent||cur?'recent':i===selected?'selected':job&&job.phase===1&&job.parent===i?'highlightParent':n?'':'empty';const disp=isGhost?n.label:actual?n.label:'∅';s+=`<button class="slot ${cls}" data-array="${i}" aria-label="数组下标 ${i}，${isGhost?'待插入':actual?'结点':'空'}${escapeHTML(disp)}" ${!actual?'disabled':''}><span class="idx">[${i}]</span><span class="letter">${escapeHTML(disp)}</span></button>`}$('#arrayGrid').innerHTML=s;autoScroll('#arrayBody',`[data-array="${job&&job.phase>=3&&job.phase<4?job.index:selected}"]`)}
+function renderLinked(){const map=displayMap();const priority=i=>job&&i===job.parent?-200:job&&i===job.index?-199:i===1?-150:(map.get(i).no*7)%19;const order=[...map.keys()].sort((a,b)=>priority(a)-priority(b));let s='';for(const i of order){const node=map.get(i),isGhost=!!node.ghost,recent=job&&job.phase>=4&&i===job.index,cur=played.includes(i)&&played[played.length-1]===i;const children=[2*i,2*i+1];const field=child=>{const key=child%2?'right':'left',ch=nodes.get(child),awaiting=job&&job.phase>=2&&job.phase<4&&job.parent===i&&job.index===child,connected=job&&job.phase>=4&&job.parent===i&&job.index===child;return `<div class="mem-field ${awaiting?'await':connected?'affected':''}"><span>${key}</span><b class="${ch?'':'null'}">${ch?'→'+asID(ch):'NULL'}</b></div>`};s+=`<div class="mem ${isGhost?'ghost':recent||cur?'recent':i===selected?'selected':''}" data-mem="${i}" tabindex="0" role="button"><div class="mem-header"><span>${asID(node)}${i===1?' · ROOT':''}</span><strong>${escapeHTML(node.label)}</strong></div><div class="mem-fields">${field(children[0])}${field(children[1])}</div></div>`}$('#linkedGrid').innerHTML=s;autoScroll('#linkBody',`[data-mem="${job?job.parent:selected}"]`)}
+function autoScroll(scrollSelector,targetSelector){const area=$(scrollSelector),el=area?.querySelector(targetSelector);if(!area||!el)return;requestAnimationFrame(()=>{const box=el.getBoundingClientRect(),outer=area.getBoundingClientRect();if(box.top<outer.top+3||box.bottom>outer.bottom-3)area.scrollTop+=box.top-outer.top-6})}
+function renderSteps(){const mode=$('#mode').value,insert=mode==='insert';const phases=['定位父结点','创建新结点','计算数组下标','连接左右指针'];if(insert){const p=job?.phase??0,$s=$('#stepStatus');$s.textContent=!job?'选择父结点后插入，启动线上 GCC':compileBusy?'GCC 正在编译并执行…':!job.ready?'⚠ '+(compileError?'编译/轨迹验证失败':'等待编译'):(p>=4?'✓ GCC 真实执行 · 四区同步完成':`GCC 逐帧 · ${p}/4`);$('#stageStrip').innerHTML=phases.map((txt,k)=>`<span class="stage ${job?(k+1<p?'passed':k+1===p?'active':'pending'):'pending'}">${k+1}. ${txt}</span>`).join('');let t='选择一个父结点，点击插入左/右孩子；支持自动或逐帧执行。';if(job){const n=nodes.get(job.parent);const i=job.index;const desc=[`准备插入 ${job.label}：目标为 ${n.label} 的${job.side==='L'?'左':'右'}孩子。`,`定位父结点 ${n.label}：实际下标 i=${job.parent}，链式标识 ${asID(n)}。`,`分配新结点 ${asID({no:job.no})}：逻辑树出现虚线新结点，链式存储暂未连父指针。`,`顺序存储：${job.side==='L'?'2i':'2i+1'}=${job.side==='L'?2*job.parent:2*job.parent+1}，预览数组槽位 A[${i}]。`,`更新父指针 ${asID(n)}.${job.side==='L'?'left':'right'} → ${asID({no:job.no})}，正式完成插入。`];t=activeTrace?`GCC 已执行第 ${activeTrace.line} 行：${desc[p]} ${activeTrace.index!==undefined?'（实际索引 '+activeTrace.index+'）':''}`:(!job.ready?(compileError||'正在向 Wandbox GCC 发送当前 C 程序，并等待真实执行轨迹…'):desc[p])}$('#trace').innerHTML=escapeHTML(t).replace(/(A\[\d+\]|NULL|left|right|2i\+1|2i|N\d+)/g,'<b>$1</b>');$('#nextStep').disabled=!job||!job.ready||job.phase>=4||compileBusy;$('#resetAnimation').textContent=job&&job.phase<4?'取消预览':'重置动画';}
+else{const seq=traversal(),name={level:'层序',pre:'先序',in:'中序',post:'后序'}[mode];$('#stepStatus').textContent=`${name}遍历 · ${step}/${seq.length}`;$('#stageStrip').innerHTML=seq.map((i,k)=>`<span class="stage ${k===step-1?'active':k<step?'passed':''}">${nodes.get(i).label}</span>`).join('');$('#trace').textContent=step===0?`点击“下一帧”按${name}顺序访问；树、数组、链式结点同步高亮。`:`第 ${step} 步：访问 ${nodes.get(seq[step-1]).label}，A[${seq[step-1]}]，${asID(nodes.get(seq[step-1]))}。`;$('#nextStep').disabled=step>=seq.length;$('#resetAnimation').textContent='重置遍历';}}
+function render(){measure();renderTree();renderArray();renderLinked();renderSteps();renderCode()}
+// GCC executes the real C source remotely.  The browser only replays TRACE events and
+// only commits the tree if the executed C program returned the expected final state.
+const STANDARD_C=String.raw`int InsertChild(BiTree p, char value, int side, int i)
+{
+    TRACE(1, i, p, NULL, side);  /* 定位父结点 */
+    if (p == NULL) return 0;
+    if (side == 0 && p->lchild != NULL) return 0;
+    if (side == 1 && p->rchild != NULL) return 0;
+
+    BiTree s = (BiTree)malloc(sizeof(BiTNode));
+    if (s == NULL) return 0;
+    s->data = value;
+    s->lchild = NULL;
+    s->rchild = NULL;
+    TRACE(2, i, p, s, side);     /* 新结点已创建 */
+
+    int k = (side == 0) ? 2 * i : 2 * i + 1;
+    TRACE(3, k, p, s, side);     /* 顺序存储下标 */
+
+    if (side == 0) p->lchild = s;
+    else p->rchild = s;
+    TRACE(4, k, p, s, side);     /* 链式指针已连接 */
+    return 1;
+}`;
+const C_PREFIX=String.raw`#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct BiTNode {
+    char data;
+    struct BiTNode *lchild, *rchild;
+} BiTNode, *BiTree;
+
+/* 教学追踪宏：printf 输出由真实 GCC 执行产生。 */
+static void trace_state(int phase,int line,int index,BiTree p,BiTree s,int side) {
+    printf("@TRACE|%d|%d|%d|%d|%c|%c|%c|%c\n",
+           phase,line,index,side,
+           p ? p->data : '-',s ? s->data : '-',
+           p && p->lchild ? p->lchild->data : '-',
+           p && p->rchild ? p->rchild->data : '-');
+}
+#define TRACE(PH,IDX,P,S,SIDE) trace_state((PH),__LINE__,(IDX),(P),(S),(SIDE))
+#line 1 "student.c"
+`;
+function buildCSource(scenario){
+    const sorted=[...nodes].sort((a,b)=>a[0]-b[0]);
+    const defs=sorted.map(([i,n])=>`    slot[${i}] = makeNode('${n.label.slice(0,1).replace(/[^A-Z]/g,'A')}');`).join('\n');
+    const idx=Number(scenario.parent),side=scenario.side==='R'?1:0,label=scenario.label.slice(0,1).replace(/[^A-Z]/g,'A');
+    const harness=String.raw`
+#line 1 "harness.c"
+static BiTree makeNode(char value) {
+    BiTree p=(BiTree)malloc(sizeof(BiTNode));
+    if (p==NULL) { fputs("allocation failed\n",stderr); exit(2); }
+    p->data=value; p->lchild=NULL; p->rchild=NULL;
+    return p;
+}
+static void outputTree(BiTree p,int i) {
+    if(p==NULL || i>31) return;
+    printf("@NODE|%d|%c\n",i,p->data);
+    outputTree(p->lchild,2*i);
+    outputTree(p->rchild,2*i+1);
+}
+int main(void) {
+    BiTree slot[32]={NULL};
+`+ '\n'+defs+String.raw`
+    for(int j=2;j<32;j++) {
+        if(slot[j]==NULL) continue;
+        if(slot[j/2]==NULL) { fputs("invalid initial tree\n",stderr); return 3; }
+        if(j%2==0) slot[j/2]->lchild=slot[j];
+        else slot[j/2]->rchild=slot[j];
+    }
+`+`    int ok=InsertChild(slot[${idx}], '${label}', ${side}, ${idx});\n`+String.raw`    printf("@RESULT|%d\n",ok);
+    outputTree(slot[1],1);
+    return 0;
+}
+`;
+    return C_PREFIX+$('#cEditor').value+'\n'+harness;
+}
+function getScenario(){
+  if(job&&job.phase<4)return {parent:job.parent,index:job.index,side:job.side,label:job.label};
+  const opts=[selected,...nodes.keys()];
+  for(const p of opts)for(const side of ['L','R']){
+    const index=2*p+(side==='R'?1:0);
+    if(index<=maxIndex&&!nodes.has(index))return {parent:p,index,side,label:String.fromCharCode(65+(serial-1)%26)};
+  }
+  return null;
+}
+function compileSetStatus(t,error=false){compileMessage=t;$('#compileStatus').textContent=t;$('#compileStatus').classList.toggle('error',!!error);}
+async function getCompiler(){
+  if(compilerName)return compilerName;
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),11000);
+  try{
+    const res=await fetch('https://wandbox.org/api/list.json',{cache:'no-store',signal:controller.signal});
+    if(!res.ok)throw Error('编译器列表 HTTP '+res.status);
+    const list=await res.json();
+    const candidates=list.filter(x=>x.language==='C'&&/^gcc/i.test(x.name));
+    const stable=candidates.find(x=>/gcc-\d/.test(x.name)&&x.name.endsWith('-c'));
+    const pick=stable||candidates.find(x=>x.name==='gcc-head-c')||candidates[0];
+    if(!pick)throw Error('服务端没有可用的 GCC C 编译器');
+    compilerName=pick.name;
+    return compilerName;
+  }finally{clearTimeout(timeout)}
+}
+function parseCompilation(data,scenario){
+  const message=[data.compiler_error||'',data.compiler_message||'',data.program_error||''].filter(Boolean).join('\n');
+  const result=String(data.status??'');
+  const stdout=String(data.program_message||'');
+  const combined=`编译器：${compilerName||'GCC'}\n状态：${result||'(无)'}\n\n=== 编译器/标准错误 ===\n${message||'(无)'}\n\n=== 程序标准输出 ===\n${stdout||'(无)'}`;
+  if((data.compiler_error&&String(data.compiler_error).trim())||result!=='0')throw Error(message||stdout||`GCC 执行失败 (status=${result})`);
+  const traces=[],map=new Map();let returnValue=null;
+  for(const ln of stdout.split(/\r?\n/)){
+    if(ln.startsWith('@TRACE|')){
+      const f=ln.split('|');if(f.length<9)continue;
+      const [ph,line,index,side]=f.slice(1,5).map(Number);
+      traces.push({phase:ph,line,index,side,parent:f[5],node:f[6],left:f[7],right:f[8]});
+    }
+    if(ln.startsWith('@NODE|')){const f=ln.split('|');if(/^\d+$/.test(f[1]))map.set(+f[1],f[2]);}
+    if(ln.startsWith('@RESULT|'))returnValue=Number(ln.split('|')[1]);
+  }
+  const error=why=>{const ex=Error(why);ex.compilerOutput=combined;throw ex};
+  if(returnValue!==1)error('C 程序返回失败：插入函数未成功，树保持原样。');
+  if(traces.length!==4||traces.some((e,i)=>e.phase!==i+1))error('程序已由 GCC 执行，但未按顺序输出 TRACE(1)～TRACE(4)，不能进行可靠的四阶段逐帧验证。');
+  if(traces.some((e,i)=>e.index!==(i>=2?scenario.index:scenario.parent)))error('GCC 的实际 TRACE 下标与当前树形不一致，已停止同步，防止展示错误动画。');
+  const sideValue=scenario.side==='R'?1:0;
+  if(traces.some(e=>e.side!==sideValue||e.parent!==nodes.get(scenario.parent).label))error('C 运行中父结点或左右方向与实际操作不一致。');
+  if(traces[0].node!=='-'||traces[1].node!==scenario.label||traces[2].node!==scenario.label||traces[3].node!==scenario.label)error('结点分配和初始化的实际执行顺序不满足教学动画要求。');
+  const ptr=scenario.side==='R'?'right':'left';
+  if(traces[2][ptr]!=='-'||traces[3][ptr]!==scenario.label)error('实际 C 指针连接与 TRACE 阶段不一致，拒绝错误动画。');
+  if(map.size!==nodes.size+1||map.get(scenario.index)!==scenario.label)error('GCC 运行后树的结点数量/新结点与预期不符；不修改可视化树。');
+  for(const [i,n] of nodes)if(map.get(i)!==n.label.slice(0,1))error('GCC 运行后原结点发生变化；不修改可视化树。');
+  return {frames:traces,output:combined};
+}
+async function compileForScenario(scenario,forInsertion=false){
+  if(!scenario){compileSetStatus('当前树没有可插入位置',true);compileError='当前树没有可插入位置';return}
+  if(job&&job.phase<4){stop();job.phase=0;job.ready=false;compiledFrames=[];activeTrace=null;}
+  const token=++remoteToken;compileBusy=true;compileError='';lastCompilePass=false;
+  compileSetStatus('联网编译中…');$('#compileC').disabled=true;
+  const source=buildCSource(scenario);window.__lastGeneratedC=source;
+  $('#editorConsole').textContent='正在连接 Wandbox 的真实 GCC 编译器…';
+  render();
+  let raw='';
+  try{
+    const compiler=await getCompiler();
+    if(token!==remoteToken)return;
+    const ctl=new AbortController(),timeout=setTimeout(()=>ctl.abort(),35000);
+    let res;
+    try{
+      res=await fetch('https://wandbox.org/api/compile.json',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({compiler,code:source,options:'warning'}),
+        credentials:'omit',signal:ctl.signal
+      });
+    }finally{clearTimeout(timeout)}
+    if(token!==remoteToken)return;
+    if(!res.ok)throw Error('线上编译服务 HTTP '+res.status+'：服务暂时不可用');
+    const data=await res.json();
+    raw=[data.compiler_error||'',data.compiler_message||'',data.program_error||'',data.program_message||''].filter(Boolean).join('\n');
+    const out=parseCompilation(data,scenario);
+    compileOutput=out.output;compileError='';lastCompilePass=true;
+    compileSetStatus(`GCC ${compiler} ✓ 4 步验证通过`);
+    $('#editorConsole').textContent=out.output;
+    if(forInsertion&&job&&job.parent===scenario.parent&&job.index===scenario.index){
+      compiledFrames=out.frames;job.ready=true;activeTrace=null;
+      notice('GCC 编译和实际运行成功！点击“下一帧”，或等待自动播放，查看四区同步。');
+      if(!cEditorOpen)playAuto();
+    }else{notice('在线 GCC 编译通过：四个 TRACE 阶段和最终二叉树已核验。');}
+  }catch(e){
+    if(token!==remoteToken)return;
+    compileError=e.message||String(e);
+    compileOutput=e.compilerOutput||raw||compileError;
+    compileSetStatus('GCC 失败：'+compileError,true);
+    $('#editorConsole').textContent=compileOutput;
+    notice('GCC 编译或执行未通过；树没有被修改。可点“编辑 C”查看/修复错误。');
+  }finally{
+    if(token===remoteToken){compileBusy=false;$('#compileC').disabled=false;render()}
+  }
+}
+function renderCode(){
+  const src=$('#cEditor').value,lines=src.split('\n');
+  const view=$('#sourceView'),current=($('#mode').value==='insert'?activeTrace?.line:null);
+  const oldScroll=view.scrollTop;
+  const html=lines.map((line,i)=>{
+    const txt=escapeHTML(line).replace(/\b(int|char|struct|if|else|return|NULL|sizeof)\b/g,'<span class="keyword">$1</span>')
+      .replace(/\b(TRACE|malloc|InsertChild)\b/g,'<span class="func">$1</span>');
+    return `<div class="src-line ${i+1===current?'active':''}" data-ln="${i+1}"><span class="ln">${i+1}</span><span class="src">${txt||' '}</span></div>`
+  }).join('');
+  if(view.innerHTML!==html){view.innerHTML=html;view.scrollTop=oldScroll;}
+  if(current){
+    const row=view.querySelector(`[data-ln="${current}"]`);
+    if(row){const top=row.offsetTop;if(top<view.scrollTop||top+row.offsetHeight>view.scrollTop+view.clientHeight)view.scrollTop=Math.max(0,top-view.clientHeight/2)}
+  }
+  const trace=$('#mode').value==='insert'?activeTrace:null;
+  const scenario=job||getScenario();
+  const vals=trace?[
+    ['i',trace.phase<3?trace.index:scenario?.parent],
+    ['side',trace.side===0?'0 / 左':'1 / 右'],
+    ['p',trace.parent==='-'?'NULL':trace.parent],
+    ['s',trace.node==='-'?'NULL':trace.node],
+    ['k',trace.phase>=3?trace.index:'未计算'],
+    ['p->lchild',trace.left==='-'?'NULL':trace.left],
+    ['p->rchild',trace.right==='-'?'NULL':trace.right],
+  ]:[["p",scenario?nodes.get(scenario.parent)?.label:'—'],['i',scenario?.parent??'—'],['s','尚未分配'],['k','—']];
+  $('#watchContent').innerHTML=vals.map(([k,v])=>`<div class="var-row"><span>${escapeHTML(k)}</span><b>${escapeHTML(v)}</b></div>`).join('')+
+    `<div class="watch-tip">${trace?`GCC 执行行号 ${trace.line} · 阶段 ${trace.phase}/4`:'变量随真实 C 轨迹刷新'}</div>`;
+}
+function initCompilerUI(){
+  $('#cEditor').value=STANDARD_C;
+  compileSetStatus('未编译 · 点击插入调用 GCC');
+  const editor=$('#editorDialog'),output=$('#outputDialog');
+  const safeShow=el=>{if(!el.open)el.showModal()};
+  $('#editC').onclick=()=>{if(job&&job.phase<4){stop();job.ready=false;job.phase=0;compiledFrames=[];activeTrace=null;}safeShow(editor);cEditorOpen=true;render()};
+  $('#closeEditor').onclick=()=>{editor.close();cEditorOpen=false};
+  $('#outputC').onclick=()=>{$('#compilerConsole').textContent=compileOutput||'尚未执行远程 GCC 编译。';safeShow(output)};
+  $('#closeOutput').onclick=()=>output.close();
+  $('#restoreC').onclick=()=>{$('#cEditor').value=STANDARD_C;codeDirty=false;clearTimeout(editTimer);compileSetStatus('标准代码已恢复，待重新编译');renderCode()};
+  $('#compileC').onclick=()=>compileForScenario(getScenario(),!!(job&&job.phase<4));
+  $('#submitC').onclick=()=>compileForScenario(getScenario(),!!(job&&job.phase<4));
+  $('#cEditor').addEventListener('input',()=>{
+    codeDirty=true;lastCompilePass=false;clearTimeout(editTimer);compileSetStatus('源码已修改 · 待重新编译');renderCode();
+    if($('#autoCompile').checked)editTimer=setTimeout(()=>compileForScenario(getScenario(),!!(job&&job.phase<4)),1800);
+  });
+  $('#cEditor').addEventListener('keydown',e=>{if(e.key==='Tab'){
+    e.preventDefault();const t=e.target,a=t.selectionStart,b=t.selectionEnd;
+    t.setRangeText('    ',a,b,'end');t.dispatchEvent(new Event('input'));
+  }});
+  $('#copyC').onclick=()=>{const sc=getScenario();navigator.clipboard?.writeText(window.__lastGeneratedC||(sc?buildCSource(sc):$('#cEditor').value)).then(()=>notice('已复制完整 C 程序')).catch(()=>notice('复制失败，请手动复制'))};
+  $('#copyOutput').onclick=()=>navigator.clipboard?.writeText(compileOutput||'').then(()=>notice('已复制 GCC 输出')).catch(()=>notice('复制失败'));
+  editor.addEventListener('close',()=>{cEditorOpen=false});
+}
+
+for(const b of document.querySelectorAll('[data-preset]'))b.addEventListener('click',()=>choosePreset(b.dataset.preset));$('#treeSvg').addEventListener('click',e=>{const g=e.target.closest('[data-i]');if(g&&!displayMap().get(+g.dataset.i)?.ghost)select(+g.dataset.i)});$('#treeSvg').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){let g=e.target.closest('[data-i]');if(g){e.preventDefault();select(+g.dataset.i)}}});$('#arrayGrid').addEventListener('click',e=>{const b=e.target.closest('[data-array]');if(b&&nodes.has(+b.dataset.array))select(+b.dataset.array)});$('#linkedGrid').addEventListener('click',e=>{const m=e.target.closest('[data-mem]');if(m&&nodes.has(+m.dataset.mem))select(+m.dataset.mem)});$('#linkedGrid').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const m=e.target.closest('[data-mem]');if(m){e.preventDefault();select(+m.dataset.mem)}}});$('#addLeft').onclick=()=>startInsert('L');$('#addRight').onclick=()=>startInsert('R');$('#deleteNode').onclick=deleteNode;$('#undo').onclick=undo;$('#nextStep').onclick=advance;$('#autoPlay').onclick=playAuto;$('#resetAnimation').onclick=()=>{if($('#mode').value==='insert')cancelAnimation();else{clearPlayback();render()}};$('#mode').onchange=()=>{stop();if(job&&job.phase<4){$('#mode').value='insert';notice('当前插入尚未完成，请先完成或取消插入动画。');return}if(job?.phase>=4)job=null;clearPlayback();render()};$('#treeZoom').onclick=()=>{zoom=!zoom;$('#treeViewport').classList.toggle('detail',zoom);$('#treeZoom').textContent=zoom?'适应屏幕':'局部放大';};for(const b of document.querySelectorAll('[data-expand]'))b.addEventListener('click',()=>{const p=document.getElementById(b.dataset.expand),expanded=p.classList.toggle('expanded');b.setAttribute('aria-label',expanded?'返回四屏布局':'放大当前面板');b.textContent=expanded?'返回四屏':'⛶';});document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.panel.expanded').forEach(x=>x.classList.remove('expanded'))});initCompilerUI();choosePreset('complete');
+})();
+</script>
+</body>
+</html>
