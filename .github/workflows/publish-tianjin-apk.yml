@@ -1,0 +1,76 @@
+name: Publish verified Tianjin ARM64 APK download
+
+on:
+  push:
+    branches: ['codex/tianjin-ds-android-arm64-20261114']
+    paths: ['.github/workflows/publish-tianjin-apk.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: publish-tianjin-ds-2027-apk
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: tianjin-ds-2027-v0.1.0-arm64
+    steps:
+      - name: Download the already verified ARM64 build
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 43519962397
+          name: tianjin-ds-2027-android-arm64-apk
+          path: release
+      - name: Verify build provenance and APK checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/43519962397" > release/build-run.json
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, hashlib, shutil
+          run = json.loads(Path('release/build-run.json').read_text())
+          assert run['conclusion'] == 'success', run['conclusion']
+          assert run['head_sha'] == '7c6831c803ae6ee7f9a45d9efecf4a18d1b72bf1', run['head_sha']
+          apks = list(Path('release').rglob('*.apk'))
+          assert len(apks) == 1, apks
+          source = apks[0]
+          digest = hashlib.sha256(source.read_bytes()).hexdigest()
+          assert digest == 'a9d4015004d83942bf159714da1c5cd4f91665fea4f03f8c78d5dce46b55ffda', digest
+          output = Path('release/tianjin-ds-2027-arm64.apk')
+          if source != output:
+              shutil.copyfile(source, output)
+          Path('release/SHA256SUMS.txt').write_text(digest + '  ' + output.name + '\n')
+          print('Verified APK:', output.name, output.stat().st_size, digest)
+          PY
+      - name: Publish the browser-downloadable APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > release/release-notes.md <<'NOTES'
+          2027 天津专升本数据结构基础填空，ARM64 已签名调试测试版。
+
+          保留原有 210 道题和页面样式。SQLite 自动保存、强制关闭后恢复、自动判题、错题集及收藏已通过 Android 模拟器验证。
+
+          本发布直接使用已成功构建并验证的安装包，不重新编译。
+          构建记录：https://github.com/amerigowannemaker-max/binary-tree/actions/runs/43519962397
+
+          下载 Assets 中的 tianjin-ds-2027-arm64.apk 即可安装。
+          SHA-256：a9d4015004d83942bf159714da1c5cd4f91665fea4f03f8c78d5dce46b55ffda
+          NOTES
+          gh release create "$RELEASE_TAG" \
+            release/tianjin-ds-2027-arm64.apk release/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --target 7c6831c803ae6ee7f9a45d9efecf4a18d1b72bf1 \
+            --title "2027 数据结构 ARM64 安装包 v0.1.0" \
+            --prerelease --latest=false \
+            --notes-file release/release-notes.md
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json url,assets
