@@ -1,6 +1,6 @@
 [package]
 name = "tianjin_ds_sqlite"
-version = "0.1.0"
+version = "0.1.1"
 description = "2027天津专升本数据结构基础填空"
 edition = "2021"
 rust-version = "1.90"

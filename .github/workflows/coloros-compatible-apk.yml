@@ -1,0 +1,226 @@
+name: Android 16 release APK compatibility build
+
+on:
+  push:
+    branches: ['codex/tianjin-ds-coloros-compat-*']
+    paths:
+      - 'tianjin-ds-android/**'
+      - '.github/workflows/coloros-compatible-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: coloros-compat-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Release ${{ matrix.target }} SDK 36
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64
+            rust_target: aarch64-linux-android
+            abi: arm64-v8a
+          - target: x86_64
+            rust_target: x86_64-linux-android
+            abi: x86_64
+    defaults:
+      run:
+        working-directory: tianjin-ds-android
+        shell: bash
+    env:
+      CI: 'true'
+      NDK_VERSION: '27.2.12479018'
+      CARGO_TERM_COLOR: never
+      CARGO_BUILD_JOBS: '2'
+      RUSTFLAGS: '-C link-arg=-Wl,-z,max-page-size=16384'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tianjin-ds-android/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - name: Android 16 SDK and NDK
+        run: |
+          set -euo pipefail
+          mkdir -p verification
+          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;${NDK_VERSION}" 2>&1 | tee verification/compat-sdk.log
+          echo "NDK_HOME=${ANDROID_HOME}/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tianjin-ds-android/src-tauri
+          key: coloros-release-${{ matrix.target }}
+          cache-on-failure: true
+      - name: Locked dependencies and original content
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund 2>&1 | tee verification/npm-ci.log
+          python3 tests/verify_integrity.py | tee verification/integrity.log
+          cargo metadata --locked --no-deps --format-version 1 --manifest-path src-tauri/Cargo.toml > verification/cargo-lock.json
+      - name: Generate and configure Android release project
+        run: |
+          set -euo pipefail
+          npm run tauri -- icon ./app-icon.png 2>&1 | tee verification/icons.log
+          npm run tauri -- android init --ci --skip-targets-install 2>&1 | tee verification/android-init.log
+          python3 ci/prepare_compat_android.py | tee verification/compat-config.log
+      - name: Build non-debuggable release APK
+        run: |
+          set -euo pipefail
+          npm run tauri -- android build --apk --ci --target ${{ matrix.target }} 2>&1 | tee verification/release-build-${{ matrix.target }}.log
+      - name: Check SDK, manifest and native ABI
+        env:
+          EXPECTED_ABI: ${{ matrix.abi }}
+          BUILD_TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          mkdir -p deliverables
+          apk_path=$(find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' | head -n 1)
+          test -n "$apk_path"
+          output_path="deliverables/tianjin-ds-2027-${BUILD_TARGET}-unsigned.apk"
+          cp "$apk_path" "$output_path"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$output_path" > verification/release-metadata.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump xmltree "$output_path" AndroidManifest.xml > verification/release-manifest.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('verification/release-metadata.txt').read_text()
+          assert "targetSdkVersion:'36'" in text,text
+          assert "compileSdkVersion='36'" in text,text
+          assert 'application-debuggable' not in text,text
+          print('Verified SDK 36, release non-debuggable')
+          PY
+          python3 tests/verify_apk.py "$output_path" "$EXPECTED_ABI" | tee verification/release-architecture.json
+          echo "APK_PATH=$output_path" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coloros-compat-unsigned-${{ matrix.target }}
+          path: tianjin-ds-android/deliverables/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Browser answer and state checks
+        if: matrix.target == 'x86_64'
+        run: |
+          set -euo pipefail
+          python3 -m pip install playwright==1.62.0
+          python3 -m playwright install --with-deps chromium
+          python3 tests/smoke.py --mode browser 2>&1 | tee verification/browser-tests.log
+      - name: Sign the emulator-only release for installation testing
+        if: matrix.target == 'x86_64'
+        run: |
+          set -euo pipefail
+          export VERIFY_PASS="$(openssl rand -hex 24)"
+          echo "::add-mask::$VERIFY_PASS"
+          keytool -genkeypair -keystore "$RUNNER_TEMP/verification.jks" -storetype JKS -alias verification -keyalg RSA -keysize 2048 -validity 3 -dname "CN=Temporary Emulator Verification" -storepass:env VERIFY_PASS -keypass:env VERIFY_PASS > /dev/null 2>&1
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign --ks "$RUNNER_TEMP/verification.jks" --ks-key-alias verification --ks-pass env:VERIFY_PASS --key-pass env:VERIFY_PASS --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --v4-signing-enabled false --out deliverables/emulator-release.apk "$APK_PATH"
+          echo "EMULATOR_APK=deliverables/emulator-release.apk" >> "$GITHUB_ENV"
+          sudo chmod 666 /dev/kvm
+      - name: Install and exercise non-debuggable release on Android 16
+        if: matrix.target == 'x86_64'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: bash tianjin-ds-android/tests/run_release_ui_smoke.sh
+      - name: Upload compatibility diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coloros-compat-checks-${{ matrix.target }}
+          path: |
+            tianjin-ds-android/verification/
+            tianjin-ds-android/src-tauri/gen/android/app/build.gradle.kts
+          retention-days: 30
+
+  sign-and-publish:
+    name: Sign and publish ARM64 compatibility APK
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: tianjin-ds-2027-v0.1.1-coloros
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: coloros-compat-unsigned-aarch64
+          path: unsigned
+      - name: Create private signing key, sign and verify release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo 'Release already exists. Refusing to rotate or overwrite its signing key.' >&2
+            exit 1
+          fi
+          sdkmanager --install "build-tools;36.0.0" > /dev/null
+          python3 -m pip install cryptography==50.0.0 > /dev/null
+          export STUDY_SIGN_PASSWORD="$(openssl rand -hex 32)"
+          echo "::add-mask::$STUDY_SIGN_PASSWORD"
+          export STUDY_SIGN_KEYSTORE="$RUNNER_TEMP/tianjin-ds-2027-release.jks"
+          keytool -genkeypair -keystore "$STUDY_SIGN_KEYSTORE" -storetype JKS -alias study-release -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Study DS 2027 Release,O=Study Tools,C=CN" -storepass:env STUDY_SIGN_PASSWORD -keypass:env STUDY_SIGN_PASSWORD > /dev/null 2>&1
+          mkdir -p release tianjin-ds-android/verification
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign --ks "$STUDY_SIGN_KEYSTORE" --ks-key-alias study-release --ks-pass env:STUDY_SIGN_PASSWORD --key-pass env:STUDY_SIGN_PASSWORD --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --v4-signing-enabled false --out release/tianjin-ds-2027-arm64-coloros-compat.apk unsigned/tianjin-ds-2027-aarch64-unsigned.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs release/tianjin-ds-2027-arm64-coloros-compat.apk | tee tianjin-ds-android/verification/release-signature.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging release/tianjin-ds-2027-arm64-coloros-compat.apk > tianjin-ds-android/verification/signed-release-metadata.txt
+          python3 tianjin-ds-android/tests/verify_apk.py release/tianjin-ds-2027-arm64-coloros-compat.apk arm64-v8a | tee tianjin-ds-android/verification/signed-release-architecture.json
+          python3 tianjin-ds-android/ci/encrypt_signing_backup.py
+          sha256sum release/tianjin-ds-2027-arm64-coloros-compat.apk > release/SHA256SUMS.txt
+      - name: Retain encrypted recovery backup and signature reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coloros-compat-signed-release-and-encrypted-backup
+          path: |
+            release/
+            tianjin-ds-android/verification/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish browser download
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > release/notes.md <<'NOTES'
+          Android 16 / ColorOS 安装兼容验证版 v0.1.1，ARM64。
+
+          改为 SDK 36 的非调试 release 构建、关闭 testOnly 标记，使用独立发布证书及 v1/v2/v3 签名，保留 16KB 内存页兼容。原 210 道题和页面样式保持不变。
+
+          已在标准 Android 16 模拟器验证 release 安装、页面加载、SQLite 草稿保存、自动判错及错题集恢复。ColorOS 实机安装结果仍需用户确认，不能仅凭旧版提示确定是厂商限制。
+
+          新签名的私钥不在公开仓库、发布附件或未加密的 Actions 产物中。
+          NOTES
+          gh release create "$RELEASE_TAG" release/tianjin-ds-2027-arm64-coloros-compat.apk release/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "2027 数据结构 Android 16 安装兼容验证版 v0.1.1" --prerelease --latest=false --notes-file release/notes.md
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json url,assets
